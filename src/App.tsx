@@ -72,7 +72,7 @@ export const App = () => {
   const [weather, setWeather] = useState<WeatherState>(null);
 
   const [stars] = useState<Star[]>(() =>
-    Array.from({length: 200}, () => ({
+    Array.from({length: 80}, () => ({
       left: Math.random() * 100,
       top: Math.random() * 100,
       size: Math.random() * 3 + 1,
@@ -158,6 +158,8 @@ export const App = () => {
   return (
     <View style={styles.root}>
       <KeepAwakeVideo />
+      {/* Opaque cover hides the keep-awake video (which plays underneath) */}
+      <View style={styles.cover} pointerEvents="none" />
       <Starfield stars={stars} />
 
       <View style={styles.center} pointerEvents="none">
@@ -191,6 +193,10 @@ export const App = () => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: '#05070F',
+  },
+  cover: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: '#05070F',
   },
   center: {
