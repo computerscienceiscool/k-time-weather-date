@@ -8,7 +8,7 @@ import {
 // Tiny silent BLACK clip hosted on this repo's GitHub Pages. Looping it registers
 // an active video-playback session so Vega keeps the display awake. file:// is not
 // supported by the W3C player, so it must be a real http(s) URL.
-const SRC = 'https://computerscienceiscool.github.io/k-time-weather-date/keepawake.mp4';
+const SRC = 'https://giolaq.github.io/scrap-tv-feed/content/aliens-from-vega/vega.mp4';
 
 /**
  * Loops a muted video to register an active video-playback session, so Vega's
