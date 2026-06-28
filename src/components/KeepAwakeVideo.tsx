@@ -5,9 +5,10 @@ import {
   VideoPlayer as W3CVideoPlayer,
 } from '@amazon-devices/react-native-w3cmedia';
 
-// HYPOTHESIS TEST: a known-good remote mp4. If this keeps the screen awake,
-// we'll swap to a tiny silent black clip (hosted, since file:// isn't supported).
-const SRC = 'https://giolaq.github.io/scrap-tv-feed/content/aliens-from-vega/vega.mp4';
+// Tiny silent BLACK clip hosted on this repo's GitHub Pages. Looping it registers
+// an active video-playback session so Vega keeps the display awake. file:// is not
+// supported by the W3C player, so it must be a real http(s) URL.
+const SRC = 'https://computerscienceiscool.github.io/k-time-weather-date/keepawake.mp4';
 
 /**
  * Loops a muted video to register an active video-playback session, so Vega's
