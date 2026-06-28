@@ -1,111 +1,97 @@
-import React, {useCallback, useEffect, useRef} from 'react';
-import {StyleSheet} from 'react-native';
-import {
-  KeplerVideoSurfaceView,
-  VideoPlayer as W3CVideoPlayer,
-} from '@amazon-devices/react-native-w3cmedia';
+import {useEffect, useRef} from 'react';
+import {AudioPlayer as W3CAudioPlayer} from '@amazon-devices/react-native-w3cmedia';
 
-// Tiny silent BLACK clip hosted on this repo's GitHub Pages. Looping it registers
-// an active video-playback session so Vega keeps the display awake. file:// is not
-// supported by the W3C player, so it must be a real http(s) URL.
-const SRC = 'https://giolaq.github.io/scrap-tv-feed/content/aliens-from-vega/vega.mp4';
+// Silent looping audio. Audio-playback is one of the session types Vega's resource
+// manager keeps the display awake for — and audio decode is far lighter than video,
+// so it dodges the memory/power pressure that made video decode fail on this stick.
+const SRC = 'https://computerscienceiscool.github.io/k-time-weather-date/awake-audio.m4a';
+
+const RETRY_MS = 4000;
 
 /**
- * Loops a muted video to register an active video-playback session, so Vega's
- * resource manager keeps the display awake (prevents the system screensaver).
- * Playback only starts once BOTH the surface and the media metadata are ready.
+ * Plays a silent audio loop to keep the screen awake. Renders nothing.
  */
 export const KeepAwakeVideo = () => {
-  const playerRef = useRef<W3CVideoPlayer | null>(null);
-  const handleRef = useRef<string | null>(null);
-  const readyRef = useRef(false);
-
-  const tryPlay = useCallback(() => {
-    const p = playerRef.current;
-    if (p && readyRef.current && handleRef.current) {
-      try {
-        p.setSurfaceHandle(handleRef.current);
-        p.play();
-        console.info('[keepawake] play() — surface + media both ready');
-      } catch (e) {
-        console.error('[keepawake] play error:', e);
-      }
-    }
-  }, []);
+  const playerRef = useRef<W3CAudioPlayer | null>(null);
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aliveRef = useRef(true);
 
   useEffect(() => {
-    const p = new W3CVideoPlayer();
-    playerRef.current = p;
+    aliveRef.current = true;
 
-    const onMeta = () => {
-      readyRef.current = true;
-      console.info('[keepawake] loadedmetadata; duration=', p.duration);
-      tryPlay();
-    };
-    const onEnded = () => {
-      try {
-        p.currentTime = 0;
-        p.play();
-      } catch (e) {}
-    };
-    const onErr = (e: any) => {
-      const code = e?.target?.error?.code;
-      const msg =
-        e?.target?.mediaControlStateUtil?.mError?.message_ ||
-        e?.target?.error?.message;
-      console.error('[keepawake] error code=', code, 'msg=', msg);
-    };
-    const onPlaying = () => console.info('[keepawake] PLAYING event');
-
-    p.initialize()
-      .then(() => {
-        try {
-          (p as any).loop = true;
-        } catch (e) {}
-        try {
-          (p as any).muted = true;
-        } catch (e) {}
-        p.autoplay = true;
-        p.addEventListener('loadedmetadata', onMeta);
-        p.addEventListener('playing', onPlaying);
-        p.addEventListener('ended', onEnded);
-        p.addEventListener('error', onErr);
-        p.src = SRC;
-        p.load();
-        console.info('[keepawake] init done, src set + load()');
-      })
-      .catch((e) => console.error('[keepawake] init failed:', e));
-
-    return () => {
+    const teardown = (p: W3CAudioPlayer | null) => {
+      if (!p) {
+        return;
+      }
       try {
         p.pause();
+      } catch (e) {}
+      try {
         p.deinitialize();
       } catch (e) {}
     };
-  }, [tryPlay]);
 
-  const onSurfaceCreated = useCallback(
-    (handle: string) => {
-      handleRef.current = handle;
-      console.info('[keepawake] surface created');
-      tryPlay();
-    },
-    [tryPlay],
-  );
+    const scheduleRetry = () => {
+      if (!aliveRef.current) {
+        return;
+      }
+      if (retryRef.current) {
+        clearTimeout(retryRef.current);
+      }
+      retryRef.current = setTimeout(start, RETRY_MS);
+    };
 
-  const onSurfaceDestroyed = useCallback((handle: string) => {
-    try {
-      playerRef.current?.clearSurfaceHandle(handle);
-    } catch (e) {}
-    handleRef.current = null;
+    const start = () => {
+      if (!aliveRef.current) {
+        return;
+      }
+      teardown(playerRef.current);
+      const p = new W3CAudioPlayer();
+      playerRef.current = p;
+
+      p.addEventListener('loadedmetadata', () => {
+        try {
+          p.play();
+        } catch (e) {}
+      });
+      p.addEventListener('playing', () => console.info('[keepawake] AUDIO PLAYING'));
+      p.addEventListener('ended', () => {
+        try {
+          p.currentTime = 0;
+          p.play();
+        } catch (e) {}
+      });
+      p.addEventListener('error', (e: any) => {
+        console.error('[keepawake] audio error code=', e?.target?.error?.code, '— retrying');
+        scheduleRetry();
+      });
+
+      p.initialize()
+        .then(() => {
+          if (!aliveRef.current) {
+            teardown(p);
+            return;
+          }
+          try {
+            (p as any).loop = true;
+          } catch (e) {}
+          p.autoplay = true;
+          p.src = SRC;
+          p.load();
+        })
+        .catch(() => scheduleRetry());
+    };
+
+    start();
+
+    return () => {
+      aliveRef.current = false;
+      if (retryRef.current) {
+        clearTimeout(retryRef.current);
+      }
+      teardown(playerRef.current);
+    };
   }, []);
 
-  return (
-    <KeplerVideoSurfaceView
-      style={StyleSheet.absoluteFill}
-      onSurfaceViewCreated={onSurfaceCreated}
-      onSurfaceViewDestroyed={onSurfaceDestroyed}
-      testID="keepawake-surface"
-    />
-  );
+  return null;
 };
