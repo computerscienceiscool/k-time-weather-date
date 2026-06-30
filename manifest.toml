@@ -1,7 +1,7 @@
 schema-version = 1
 
 [package]
-title = "Basic UI React Native Application for project hellovega"
+title = "K Time Weather Date"
 version = "0.1.0"
 id = "com.thesalleys.hellovega"
 
@@ -10,4 +10,60 @@ id = "com.thesalleys.hellovega"
 id = "com.thesalleys.hellovega.main"
 runtime-module = "/com.amazon.kepler.keplerscript.runtime.loader_2@IKeplerScript_2_0"
 launch-type = "singleton"
-categories = ["com.amazon.category.main"]
+categories = [
+    "com.amazon.category.main",
+    "com.amazon.category.kepler.media",
+]
+
+[processes]
+[[processes.group]]
+component-ids = ["com.thesalleys.hellovega.main"]
+
+# --- Media playback services (required so the W3C media player can reach the
+#     audio/video pipeline; without these you get "Function not implemented") ---
+[wants]
+[[wants.service]]
+id = "com.amazon.media.server"
+
+[[wants.service]]
+id = "com.amazon.mediametrics.service"
+
+[[wants.service]]
+id = "com.amazon.media.playersession.service"
+
+[[wants.service]]
+id = "com.amazon.mediabuffer.service"
+
+[[wants.service]]
+id = "com.amazon.mediatransform.service"
+
+[[wants.service]]
+id = "com.amazon.audio.stream"
+
+[[wants.service]]
+id = "com.amazon.audio.control"
+
+[[wants.service]]
+id = "com.amazon.audio.system"
+
+# Required for GIPC SR - audio/video playback
+[[wants.service]]
+id = "com.amazon.gipc.uuid.*"
+
+[[wants.service]]
+id = "com.amazon.network.service"
+
+[[wants.service]]
+id = "com.amazon.inputd.service"
+
+[needs]
+[[needs.privilege]]
+id = "com.amazon.media.secureplayback"
+
+[[needs.privilege]]
+id = "com.amazon.network.privilege.net-info"
+
+[offers]
+# Required for GIPC SR
+[[offers.service]]
+id = "com.amazon.gipc.uuid.*"
